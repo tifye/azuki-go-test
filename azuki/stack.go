@@ -7,23 +7,50 @@ const (
 	Horizontal Orientation = "horizontal"
 )
 
+type ChildrenSourceType string
+
+var (
+	ChildrenSourceTypeSlice ChildrenSourceType = "slice"
+	ChildrenSourceTypeKey   ChildrenSourceType = "key"
+)
+
+type ChildrenSource interface {
+	Type() ChildrenSourceType
+}
+
+type ChildrenSlice []Component
+
+func (c ChildrenSlice) Type() ChildrenSourceType {
+	return ChildrenSourceTypeSlice
+}
+
+type ChildrenKey string
+
+func (c ChildrenKey) Type() ChildrenSourceType {
+	return ChildrenSourceTypeKey
+}
+
 type StackComponent struct {
 	BaseComponent
-	Orientation Orientation `json:"orientation"`
-	Children    []Component `json:"children"`
-	Gap         uint        `json:"gap,omitzero"`
+	Orientation Orientation    `json:"orientation"`
+	Children    ChildrenSource `json:"children"`
+	Gap         uint           `json:"gap,omitzero"`
 }
 
 func Stack(orientation Orientation) StackComponent {
 	return StackComponent{
 		BaseComponent: newBaseComponent(ComponentTypeStack),
 		Orientation:   orientation,
-		Children:      make([]Component, 0),
 	}
 }
 
 func (s StackComponent) WithChildren(children ...Component) StackComponent {
-	s.Children = append(s.Children, children...)
+	s.Children = ChildrenSlice(children)
+	return s
+}
+
+func (s StackComponent) WithChildrenKey(key string) StackComponent {
+	s.Children = ChildrenKey(key)
 	return s
 }
 

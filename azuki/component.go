@@ -3,11 +3,12 @@ package azuki
 type ComponentType string
 
 var (
-	ComponentTypeButton ComponentType = "button"
-	ComponentTypeLabel  ComponentType = "label"
-	ComponentTypeImage  ComponentType = "image"
-	ComponentTypeStack  ComponentType = "stack"
-	ComponentTypeStat   ComponentType = "stat"
+	ComponentTypeButton    ComponentType = "button"
+	ComponentTypeLabel     ComponentType = "label"
+	ComponentTypeImage     ComponentType = "image"
+	ComponentTypeStack     ComponentType = "stack"
+	ComponentTypeStat      ComponentType = "stat"
+	ComponentTypeTextInput ComponentType = "textInput"
 )
 
 type BaseComponent struct {

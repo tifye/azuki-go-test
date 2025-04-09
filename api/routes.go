@@ -4,6 +4,7 @@ import (
 	a "azuki-server/azuki"
 	"fmt"
 	"net/http"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -39,12 +40,37 @@ func registerRoutes(e *echo.Echo, _ *viper.Viper, logger *log.Logger) {
 }
 
 func handleNekoparaPage() echo.HandlerFunc {
-	// const base string = "http://192.168.18.175:8484"
+	links := map[string]string{
+		"chocola":  "https://rare-gallery.com/mocahbig/77284-Chocola-Nekopara-Vanilla-Nekopara-Animal-Ears.png",
+		"vanilla":  "https://rare-gallery.com/mocahbig/77284-Chocola-Nekopara-Vanilla-Nekopara-Animal-Ears.png",
+		"maple":    "https://rare-gallery.com/thumbnail/71362-Maple-Nekopara-Cinnamon-NekoparaNEKOPARA-Vol..jpg",
+		"cinnamon": "https://rare-gallery.com/thumbnail/71362-Maple-Nekopara-Cinnamon-NekoparaNEKOPARA-Vol..jpg",
+		"coconut":  "https://w0.peakpx.com/wallpaper/253/123/HD-wallpaper-nekopara-nekopara-vol-2-azuki-nekopara-coconut-nekopara-heterochromia.jpg",
+		"azuki":    "https://w0.peakpx.com/wallpaper/253/123/HD-wallpaper-nekopara-nekopara-vol-2-azuki-nekopara-coconut-nekopara-heterochromia.jpg",
+		"shigure":  "https://preview.redd.it/daily-neko-girl-day-50-3-shigure-looked-stunning-in-this-v0-0abxsb1rwo0e1.jpeg?auto=webp&s=35f2a6116e4baa667f62f6c2e5d7c2b02de0c6cd",
+	}
+	type request struct {
+		Input string `query:"input"`
+	}
 	return func(c echo.Context) error {
+		var req request
+		if err := c.Bind(&req); err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		input := strings.ToLower(req.Input)
+		link, ok := links[input]
+		if !ok {
+			schema := a.NewSchema(
+				a.Label(a.String("Not found ):")),
+			)
+			return c.JSON(http.StatusOK, schema)
+		}
+
 		schema := a.NewSchema(
 			a.Stack(a.Vertical).WithChildren(
-				a.Image(a.Text("https://rare-gallery.com/mocahbig/77284-Chocola-Nekopara-Vanilla-Nekopara-Animal-Ears.png")),
-				a.Label(a.Text("Chocola & Vanilla")),
+				a.Image(a.Text(link)),
+				a.Label(a.Text(strings.ToTitle(input))),
 			),
 		)
 		return c.JSON(http.StatusOK, schema)
@@ -54,11 +80,12 @@ func handleNekoparaPage() echo.HandlerFunc {
 func handleSchema(logger *log.Logger) echo.HandlerFunc {
 	const base string = "http://192.168.18.175:8484"
 	const shigure string = "https://shigure-683956955842.europe-west1.run.app"
-	const azukiImg string = "https://media.discordapp.net/attachments/1211775725628166186/1313884137291124870/c9942669afc4e7306009afaaf0e67f12-1.jpg?ex=67f5e435&is=67f492b5&hm=66ed2422872d8bdb787548e99aca0d343c305e6ca3738f8f28ef2282b6bdc3e5&=&format=webp&width=593&height=789"
 	return func(c echo.Context) error {
 		logger.Debug("Schema!")
 		schema := a.NewSchema(
 			a.Label(a.String("Welcome to Azuki!")),
+			a.TextInput(),
+			a.Stack(a.Vertical).WithChildrenKey("search"),
 			a.Stack(a.Horizontal).WithChildren(
 				a.Stat(a.HTTPText(base+"/coconut")).
 					WithTitle("Cinnamon").
@@ -73,7 +100,6 @@ func handleSchema(logger *log.Logger) echo.HandlerFunc {
 					WithDescription("counter").
 					WithPlace(a.PlaceEnd),
 			),
-			a.Image(a.String(azukiImg)),
 			a.Stack(a.Horizontal).WithChildren(
 				a.Button(base+"/counter/add").
 					WithText("+").
