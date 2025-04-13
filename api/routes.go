@@ -1,13 +1,14 @@
 package api
 
 import (
-	a "azuki-server/azuki"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	a "github.com/tifye/azuki-go"
 
 	"github.com/charmbracelet/log"
 	"github.com/labstack/echo/v4"

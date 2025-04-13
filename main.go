@@ -34,7 +34,6 @@ func main() {
 	if err != nil {
 		log.Printf("failed to load .env file %s\n", err)
 	}
-
 	logger := log.Default()
 	if config.GetString("ENVIRONMENT") == "dev" {
 		logger.SetLevel(log.DebugLevel)
