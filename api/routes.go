@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func registerRoutes(e *echo.Echo, _ *viper.Viper, logger *log.Logger) {
+func registerRoutes(e *echo.Echo, config *viper.Viper, logger *log.Logger) {
 	e.GET("/", func(c echo.Context) error {
 		logger.Debug("Azuki!")
 		return c.String(http.StatusOK, "Azuki!")
@@ -22,7 +23,8 @@ func registerRoutes(e *echo.Echo, _ *viper.Viper, logger *log.Logger) {
 	start := time.Now()
 
 	var counter atomic.Int64
-	e.GET("/schema", handleSchema(logger.WithPrefix("schema")))
+	e.GET("/schema", handleSchema(logger.WithPrefix("schema"), config.GetString("ADDR")))
+	e.GET("/list", handleAddToList(config.GetString("ADDR")))
 	e.GET("/nekopara/schema", handleNekoparaPage())
 	e.POST("/trigger-a", handleTestTrigger(logger.WithPrefix("trigger-a")))
 	e.POST("/trigger-b", handleTestTrigger(logger.WithPrefix("trigger-b")))
@@ -77,20 +79,46 @@ func handleNekoparaPage() echo.HandlerFunc {
 	}
 }
 
-func handleSchema(logger *log.Logger) echo.HandlerFunc {
-	const base string = "http://192.168.18.175:8484"
+func handleAddToList(base string) echo.HandlerFunc {
+	list := make([]string, 0)
+	mu := sync.Mutex{}
+	type request struct {
+		Input string `query:"input"`
+	}
+	return func(c echo.Context) error {
+		var req request
+		if err := c.Bind(&req); err != nil {
+			return c.String(http.StatusBadRequest, err.Error())
+		}
+
+		if req.Input == "" {
+			return c.NoContent(http.StatusOK)
+		}
+
+		mu.Lock()
+		list = append(list, req.Input)
+		mu.Unlock()
+
+		comp := make([]a.Component, 0, len(list))
+		for _, l := range list {
+			comp = append(comp, a.Label(a.Text(l)))
+		}
+		return c.JSON(http.StatusOK, a.NewSchema(comp...))
+	}
+}
+
+func handleSchema(logger *log.Logger, base string) echo.HandlerFunc {
 	const shigure string = "https://shigure-683956955842.europe-west1.run.app"
 	return func(c echo.Context) error {
 		logger.Debug("Schema!")
 		schema := a.NewSchema(
 			a.Label(a.String("Welcome to Azuki!")),
-			a.TextInput(),
+			a.TextInput().WithName("search").WithTarget(base+"/nekopara/schema"),
 			a.Stack(a.Vertical).WithChildrenKey("search"),
 			a.Stack(a.Horizontal).WithChildren(
 				a.Stat(a.HTTPText(base+"/coconut")).
 					WithTitle("Cinnamon").
 					WithDescription("counter"),
-
 				a.Stat(a.HTTPText(base+"/cinnamon").WithWatch(time.Second)).
 					WithTitle("Shigure").
 					WithPlace(a.PlaceCenter),
@@ -125,6 +153,8 @@ func handleSchema(logger *log.Logger) echo.HandlerFunc {
 				),
 				a.Image(a.HTTPText(shigure+"/activity").WitFieldpath("ThumbnailUrl")),
 			),
+			a.TextInput().WithName("random-list").WithTarget(base+"/list").WithDebounce(time.Second),
+			a.Stack(a.Vertical).WithChildrenKey("random-list"),
 		)
 		return c.JSON(http.StatusOK, schema)
 	}
